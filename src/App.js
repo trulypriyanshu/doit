@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { 
   format, addDays, addWeeks, addMonths, addYears, 
-  isAfter, isSameDay, parseISO, startOfDay, isBefore 
+  isAfter, isSameDay, parseISO, startOfDay, isBefore, isToday 
 } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -84,9 +84,11 @@ const getRecurrenceDisplayText = (task) => {
   return text;
 };
 
-const calculateNextOccurrence = (task) => {
+const calculateNextOccurrence = (task, completedDate) => {
   if (!task.recurrence || !task.recurrencePattern) return null;
   
+  // Start from the completed date (now) instead of the original due date
+  const referenceDate = completedDate || new Date();
   const currentDate = parseISO(task.dueDate);
   const now = new Date();
   
@@ -97,10 +99,18 @@ const calculateNextOccurrence = (task) => {
 
   let nextDate = currentDate;
   
+  // If the current task is already overdue or due today, we need to find the next occurrence
+  // We'll calculate from the current date to ensure we get the next valid date
+  if (isAfter(now, currentDate) || isSameDay(now, currentDate)) {
+    // For the first iteration, start from current date
+    nextDate = now;
+  }
+
   // Safety break to prevent infinite loops in bad data
   let iterations = 0;
   const MAX_ITERATIONS = 1000;
 
+  // Keep adding intervals until we find a date in the future
   while ((isAfter(now, nextDate) || isSameDay(nextDate, currentDate)) && iterations < MAX_ITERATIONS) {
     nextDate = addInterval(nextDate, task);
     
@@ -111,7 +121,12 @@ const calculateNextOccurrence = (task) => {
     iterations++;
   }
 
-  return nextDate.toISOString().split('T')[0];
+  // If we found a valid future date, return it
+  if (isAfter(nextDate, now) || isSameDay(nextDate, addDays(now, 1))) {
+    return nextDate.toISOString().split('T')[0];
+  }
+  
+  return null;
 };
 
 const addInterval = (date, task) => {
@@ -806,7 +821,7 @@ const App = () => {
     const saved = localStorage.getItem('tasks');
     return saved ? JSON.parse(saved) : SAMPLE_TASKS;
   });
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState('today'); // Changed default from 'all' to 'today'
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
@@ -838,12 +853,13 @@ const App = () => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
-    const nextDate = calculateNextOccurrence(task);
+    // Calculate next occurrence based on current date/time
+    const nextDate = calculateNextOccurrence(task, new Date());
     
-    // Complete current
+    // Complete current task
     const updatedTasks = tasks.map(t => t.id === taskId ? { ...t, completed: true } : t);
 
-    // Create next if valid
+    // Create next occurrence if valid
     if (nextDate) {
       const newTask = {
         ...task,
@@ -869,12 +885,16 @@ const App = () => {
       case 'overdue': result = tasks.filter(t => !t.completed && isBefore(parseISO(t.dueDate), startOfDay(now))); break;
       case 'today': result = tasks.filter(t => !t.completed && isSameDay(parseISO(t.dueDate), now)); break;
       case 'recurring': result = tasks.filter(t => t.recurrence); break;
-      default: break;
+      case 'all': result = tasks; break;
+      default: result = tasks.filter(t => !t.completed && isSameDay(parseISO(t.dueDate), now)); break;
     }
     
     // Sort: Overdue first, then by date, then priority
     return result.sort((a, b) => {
       if (a.completed !== b.completed) return a.completed ? 1 : -1;
+      const aOverdue = !a.completed && isBefore(parseISO(a.dueDate), startOfDay(new Date()));
+      const bOverdue = !b.completed && isBefore(parseISO(b.dueDate), startOfDay(new Date()));
+      if (aOverdue !== bOverdue) return aOverdue ? -1 : 1;
       return new Date(a.dueDate) - new Date(b.dueDate);
     });
   }, [tasks, filter]);
@@ -884,7 +904,8 @@ const App = () => {
     const completed = tasks.filter(t => t.completed).length;
     const overdue = tasks.filter(t => !t.completed && isBefore(parseISO(t.dueDate), startOfDay(new Date()))).length;
     const dueToday = tasks.filter(t => !t.completed && isSameDay(parseISO(t.dueDate), new Date())).length;
-    return { total, completed, overdue, dueToday };
+    const recurring = tasks.filter(t => t.recurrence).length;
+    return { total, completed, overdue, dueToday, recurring };
   }, [tasks]);
 
   return (
@@ -941,7 +962,7 @@ const App = () => {
                 { id: 'today', label: 'Due Today', icon: Clock, count: stats.dueToday, highlight: true },
                 { id: 'active', label: 'Active', icon: ListTodo, count: stats.total - stats.completed },
                 { id: 'overdue', label: 'Overdue', icon: AlertCircle, count: stats.overdue, alert: true },
-                { id: 'recurring', label: 'Recurring', icon: Repeat, count: tasks.filter(t => t.recurrence).length },
+                { id: 'recurring', label: 'Recurring', icon: Repeat, count: stats.recurring },
                 { id: 'completed', label: 'Completed', icon: CheckCircle2, count: stats.completed },
               ].map(item => (
                 <button
@@ -1007,6 +1028,9 @@ const App = () => {
                 {filter === 'all' ? 'All Tasks' : 
                  filter === 'active' ? 'Active Tasks' :
                  filter === 'today' ? "Today's Tasks" :
+                 filter === 'overdue' ? 'Overdue Tasks' :
+                 filter === 'recurring' ? 'Recurring Tasks' :
+                 filter === 'completed' ? 'Completed Tasks' :
                  filter.charAt(0).toUpperCase() + filter.slice(1)}
               </h1>
               <p className="text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2 text-sm">
@@ -1021,12 +1045,22 @@ const App = () => {
   
           <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
             <div className="max-w-4xl mx-auto">
-              {stats.overdue > 0 && filter !== 'completed' && (
+              {stats.overdue > 0 && filter !== 'completed' && filter !== 'overdue' && (
                 <div className="mb-6 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-xl p-4 flex items-start gap-3">
                   <AlertCircle className="text-red-500 dark:text-red-400 mt-0.5" size={20} />
                   <div>
                     <h4 className="font-semibold text-red-700 dark:text-red-400">You have {stats.overdue} overdue task{stats.overdue > 1 ? 's' : ''}</h4>
                     <p className="text-sm text-red-600 dark:text-red-300 mt-1">Check your list and reschedule if necessary.</p>
+                  </div>
+                </div>
+              )}
+
+              {filter === 'today' && stats.dueToday === 0 && (
+                <div className="mb-6 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-xl p-4 flex items-start gap-3">
+                  <CheckCircle2 className="text-amber-500 dark:text-amber-400 mt-0.5" size={20} />
+                  <div>
+                    <h4 className="font-semibold text-amber-700 dark:text-amber-400">No tasks due today</h4>
+                    <p className="text-sm text-amber-600 dark:text-amber-300 mt-1">You're all caught up! Add new tasks or check upcoming tasks.</p>
                   </div>
                 </div>
               )}
@@ -1038,7 +1072,10 @@ const App = () => {
                   </div>
                   <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-300">No tasks found</h3>
                   <p className="text-slate-500 dark:text-slate-400">
-                    {filter === 'today' ? "You have no tasks due today." : "You're all caught up or haven't added any tasks yet."}
+                    {filter === 'today' ? "You have no tasks due today." : 
+                     filter === 'overdue' ? "No overdue tasks. Great job!" :
+                     filter === 'completed' ? "No completed tasks yet." :
+                     "You're all caught up or haven't added any tasks yet."}
                   </p>
                   <button 
                     onClick={() => setIsModalOpen(true)}
