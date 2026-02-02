@@ -437,9 +437,17 @@ const TaskItem = ({ task, onUpdate, onDelete, onCompleteRecurring }) => {
 
   const handleComplete = (e) => {
     e.stopPropagation();
-    if (task.recurrence) {
+    
+    // If task is already completed, just toggle the completion status
+    if (task.completed) {
+      onUpdate(task.id, { ...task, completed: false });
+    } 
+    // If task is recurring and not completed, handle recurring completion
+    else if (task.recurrence) {
       onCompleteRecurring(task.id);
-    } else {
+    } 
+    // If task is not recurring and not completed, just toggle completion
+    else {
       onUpdate(task.id, { ...task, completed: !task.completed });
     }
   };
@@ -888,6 +896,35 @@ const App = () => {
 
   useEffect(() => {
     localStorage.setItem('theme', darkMode ? 'dark' : 'light');
+    
+    // Add custom scrollbar styles to the document
+    const style = document.createElement('style');
+    style.textContent = `
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: ${darkMode ? '#0f172a' : '#f8fafc'};
+        border-radius: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: ${darkMode ? '#334155' : '#cbd5e1'};
+        border-radius: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: ${darkMode ? '#475569' : '#94a3b8'};
+      }
+      .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: ${darkMode ? '#334155 #0f172a' : '#cbd5e1 #f8fafc'};
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
   }, [darkMode]);
 
   const toggleTheme = () => setDarkMode(!darkMode);
@@ -903,6 +940,12 @@ const App = () => {
   const handleCompleteRecurring = (taskId) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
+
+    // If task is already completed, just toggle it back
+    if (task.completed) {
+      updateTask(taskId, { ...task, completed: false });
+      return;
+    }
 
     // Calculate next occurrence based on current date/time
     const nextDate = calculateNextOccurrence(task, new Date());
@@ -961,6 +1004,28 @@ const App = () => {
 
   return (
     <div className={`min-h-screen transition-colors duration-200 ${darkMode ? 'dark bg-slate-950' : 'bg-slate-50'}`}>
+      <style jsx global>{`
+        /* Custom scrollbar for the entire app */
+        ::-webkit-scrollbar {
+          width: 10px;
+          height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+          background: ${darkMode ? '#0f172a' : '#f8fafc'};
+        }
+        ::-webkit-scrollbar-thumb {
+          background: ${darkMode ? '#334155' : '#cbd5e1'};
+          border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: ${darkMode ? '#475569' : '#94a3b8'};
+        }
+        * {
+          scrollbar-width: thin;
+          scrollbar-color: ${darkMode ? '#334155 #0f172a' : '#cbd5e1 #f8fafc'};
+        }
+      `}</style>
+      
       <div className="flex min-h-screen font-sans text-slate-900 dark:text-slate-100 selection:bg-indigo-100 dark:selection:bg-indigo-900/50 selection:text-indigo-900 dark:selection:text-indigo-100">
         
         {/* Mobile Header */}
@@ -987,7 +1052,8 @@ const App = () => {
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
           md:relative md:translate-x-0
         `}>
-          <div className="p-6">
+          {/* Sidebar Header - Fixed */}
+          <div className="p-6 pb-0 flex-shrink-0">
             <div className="flex items-center justify-between mb-8 pl-2">
               <div className="flex items-center gap-3 font-bold text-2xl text-slate-900 dark:text-white tracking-tight">
                 <div className="bg-indigo-600 text-white p-1.5 rounded-lg shadow-lg shadow-indigo-600/30">
@@ -1011,7 +1077,10 @@ const App = () => {
               <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" /> 
               <span>New Task</span>
             </button>
-  
+          </div>
+
+          {/* Scrollable Sidebar Content */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar px-6 pt-4">
             <nav className="space-y-1.5">
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-4">Overview</div>
               {[
@@ -1052,34 +1121,34 @@ const App = () => {
                 </button>
               ))}
             </nav>
-          </div>
-  
-          <div className="mt-auto p-6 m-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-             <div className="flex items-center justify-between mb-4">
-                <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Productivity</h4>
-                <TrendingUp size={14} className="text-emerald-500" />
-             </div>
-             
-             <div className="space-y-4">
-               <div>
-                 <div className="flex justify-between text-xs font-medium mb-1.5">
-                   <span className="text-slate-600 dark:text-slate-400">Due Today</span>
-                   <span className="text-slate-900 dark:text-slate-200">{stats.dueToday}</span>
+
+            <div className="mt-8 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+               <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Productivity</h4>
+                  <TrendingUp size={14} className="text-emerald-500" />
+               </div>
+               
+               <div className="space-y-4">
+                 <div>
+                   <div className="flex justify-between text-xs font-medium mb-1.5">
+                     <span className="text-slate-600 dark:text-slate-400">Due Today</span>
+                     <span className="text-slate-900 dark:text-slate-200">{stats.dueToday}</span>
+                   </div>
+                   <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
+                     <div className="bg-amber-500 h-1.5 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.5)]" style={{ width: `${Math.min((stats.dueToday / (stats.total || 1)) * 100, 100)}%` }}></div>
+                   </div>
                  </div>
-                 <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
-                   <div className="bg-amber-500 h-1.5 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.5)]" style={{ width: `${Math.min((stats.dueToday / (stats.total || 1)) * 100, 100)}%` }}></div>
+                 <div>
+                   <div className="flex justify-between text-xs font-medium mb-1.5">
+                     <span className="text-slate-600 dark:text-slate-400">Completion</span>
+                     <span className="text-slate-900 dark:text-slate-200">{Math.round((stats.completed / (stats.total || 1)) * 100)}%</span>
+                   </div>
+                   <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
+                     <div className="bg-emerald-500 h-1.5 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]" style={{ width: `${(stats.completed / (stats.total || 1)) * 100}%` }}></div>
+                   </div>
                  </div>
                </div>
-               <div>
-                 <div className="flex justify-between text-xs font-medium mb-1.5">
-                   <span className="text-slate-600 dark:text-slate-400">Completion</span>
-                   <span className="text-slate-900 dark:text-slate-200">{Math.round((stats.completed / (stats.total || 1)) * 100)}%</span>
-                 </div>
-                 <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
-                   <div className="bg-emerald-500 h-1.5 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]" style={{ width: `${(stats.completed / (stats.total || 1)) * 100}%` }}></div>
-                 </div>
-               </div>
-             </div>
+            </div>
           </div>
         </aside>
   
