@@ -1486,7 +1486,7 @@ const App = () => {
       <div className="flex min-h-screen font-sans text-slate-900 dark:text-slate-100 selection:bg-indigo-100 dark:selection:bg-indigo-900/50 selection:text-indigo-900 dark:selection:text-indigo-100">
         
     {/* Mobile Header */}
-        <div className="md:hidden fixed top-0 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 px-4 py-3 flex justify-between items-center transition-colors duration-200 safe-area-top">
+        <div className="md:hidden fixed top-0 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 px-4 py-3 flex justify-between items-center transition-colors duration-200">
            <div className="flex items-center gap-2 font-bold text-indigo-600 dark:text-indigo-400">
              <div className="bg-indigo-600 text-white p-1 rounded-md">
                 <Layout size={18} fill="currentColor" />
