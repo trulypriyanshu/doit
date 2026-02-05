@@ -1185,8 +1185,8 @@ const App = () => {
             </div>
           </header>
   
-          <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-10 custom-scrollbar z-0">
-            <div className="max-w-4xl mx-auto pt-6">
+          <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-10 custom-scrollbar z-0 mt-4">
+            <div className="max-w-4xl mx-auto">
               {stats.overdue > 0 && filter !== 'completed' && filter !== 'overdue' && (
                 <div className="mb-8 bg-rose-50/80 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/50 rounded-2xl p-4 flex items-start gap-4 shadow-sm backdrop-blur-sm">
                   <div className="bg-rose-100 dark:bg-rose-900/50 p-2 rounded-xl text-rose-600 dark:text-rose-400">
