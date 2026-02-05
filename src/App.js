@@ -1,10 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react';
+[file name]: App.js
+[file content begin]
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Plus, Calendar, Repeat, Trash2, Edit2, Check, Save, 
   X, ChevronDown, ChevronUp, GripVertical, CheckCircle2, 
   Clock, TrendingUp, ListTodo, AlertCircle, Layout, 
   PieChart, Tag, ArrowRight, MoreHorizontal, Sun, Moon,
-  Filter, Bell, Menu
+  Filter, Bell, Menu, Database, Eye, EyeOff, Tag as TagIcon,
+  Search, RefreshCw, User, Settings
 } from 'lucide-react';
 import { 
   format, addDays, addWeeks, addMonths, addYears, 
@@ -223,6 +226,392 @@ const PRIORITY_COLORS = {
   low: 'text-teal-600 bg-teal-50 ring-1 ring-teal-500/20 dark:bg-teal-900/20 dark:text-teal-300 dark:ring-teal-500/30'
 };
 
+// --- MODAL COMPONENTS ---
+
+const SettingsModal = ({ isOpen, onClose, onClearData, darkMode }) => {
+  const [confirmClear, setConfirmClear] = useState(false);
+
+  if (!isOpen) return null;
+
+  const handleClearData = () => {
+    if (confirmClear) {
+      localStorage.removeItem('tasks');
+      localStorage.removeItem('theme');
+      window.location.reload();
+    } else {
+      setConfirmClear(true);
+      setTimeout(() => setConfirmClear(false), 3000);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md shadow-2xl shadow-slate-900/20 overflow-hidden animate-in zoom-in-95 duration-300">
+        <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2.5">
+            <Settings size={20} className="text-indigo-500" />
+            Settings
+          </h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full p-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        
+        <div className="p-6 space-y-6">
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Data Management</h3>
+            
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3">
+                  <Database size={20} className="text-rose-500" />
+                  <div>
+                    <h4 className="font-medium text-slate-800 dark:text-slate-200">Clear All Data</h4>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Remove all tasks and reset to defaults</p>
+                  </div>
+                </div>
+              </div>
+              
+              <button
+                onClick={handleClearData}
+                className={`w-full mt-4 py-3 rounded-xl font-medium transition-all ${
+                  confirmClear 
+                    ? 'bg-rose-600 hover:bg-rose-700 text-white' 
+                    : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200'
+                }`}
+              >
+                {confirmClear ? 'Click Again to Confirm' : 'Clear All Data'}
+              </button>
+              
+              {confirmClear && (
+                <p className="mt-2 text-sm text-rose-600 dark:text-rose-400 text-center">
+                  Warning: This action cannot be undone!
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">App Info</h3>
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-slate-600 dark:text-slate-400">Version</span>
+                  <span className="font-medium text-slate-800 dark:text-slate-200">1.0.0</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600 dark:text-slate-400">Theme</span>
+                  <span className="font-medium text-slate-800 dark:text-slate-200">
+                    {darkMode ? 'Dark' : 'Light'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600 dark:text-slate-400">Tasks Count</span>
+                  <span className="font-medium text-slate-800 dark:text-slate-200">
+                    {JSON.parse(localStorage.getItem('tasks') || '[]').length}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 flex justify-end">
+          <button 
+            onClick={onClose}
+            className="px-6 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-800 rounded-xl transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const FilterModal = ({ isOpen, onClose, currentFilter, onFilterChange, categories, priorities, darkMode }) => {
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectedPriorities, setSelectedPriorities] = useState([]);
+  const [showCompleted, setShowCompleted] = useState(true);
+  const [dateRange, setDateRange] = useState('all');
+
+  if (!isOpen) return null;
+
+  const handleApply = () => {
+    onFilterChange({
+      categories: selectedCategories,
+      priorities: selectedPriorities,
+      showCompleted,
+      dateRange
+    });
+    onClose();
+  };
+
+  const handleReset = () => {
+    setSelectedCategories([]);
+    setSelectedPriorities([]);
+    setShowCompleted(true);
+    setDateRange('all');
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md shadow-2xl shadow-slate-900/20 overflow-hidden animate-in zoom-in-95 duration-300">
+        <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2.5">
+            <Filter size={20} className="text-indigo-500" />
+            Advanced Filters
+          </h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full p-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        
+        <div className="p-6 space-y-6">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-3">Date Range</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {['all', 'today', 'week', 'month', 'overdue'].map(range => (
+                <button
+                  key={range}
+                  onClick={() => setDateRange(range)}
+                  className={`py-2.5 text-sm font-medium rounded-lg border transition-all ${
+                    dateRange === range
+                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-indigo-300'
+                  }`}
+                >
+                  {range === 'all' ? 'All Dates' : 
+                   range === 'today' ? 'Today' : 
+                   range === 'week' ? 'This Week' : 
+                   range === 'month' ? 'This Month' : 
+                   'Overdue'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-3">Categories</h3>
+            <div className="flex flex-wrap gap-2">
+              {Object.keys(categories).map(category => (
+                <button
+                  key={category}
+                  onClick={() => {
+                    if (selectedCategories.includes(category)) {
+                      setSelectedCategories(selectedCategories.filter(c => c !== category));
+                    } else {
+                      setSelectedCategories([...selectedCategories, category]);
+                    }
+                  }}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${
+                    selectedCategories.includes(category)
+                      ? `${categories[category].split(' ')[0]} text-white border-current`
+                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-indigo-300'
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-3">Priorities</h3>
+            <div className="flex flex-wrap gap-2">
+              {['high', 'medium', 'low'].map(priority => (
+                <button
+                  key={priority}
+                  onClick={() => {
+                    if (selectedPriorities.includes(priority)) {
+                      setSelectedPriorities(selectedPriorities.filter(p => p !== priority));
+                    } else {
+                      setSelectedPriorities([...selectedPriorities, priority]);
+                    }
+                  }}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${
+                    selectedPriorities.includes(priority)
+                      ? `${priorities[priority].split(' ')[0]} text-white border-current`
+                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-indigo-300'
+                  }`}
+                >
+                  {priority}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+            <div className="flex items-center gap-3">
+              <div className={`p-1 rounded ${showCompleted ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-slate-100 dark:bg-slate-700'}`}>
+                {showCompleted ? <Eye size={16} className="text-emerald-600 dark:text-emerald-400" /> : <EyeOff size={16} className="text-slate-400" />}
+              </div>
+              <div>
+                <h4 className="font-medium text-slate-800 dark:text-slate-200">Show Completed</h4>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Display completed tasks</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowCompleted(!showCompleted)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                showCompleted ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                showCompleted ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
+          </div>
+        </div>
+        
+        <div className="p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 flex justify-between">
+          <button 
+            onClick={handleReset}
+            className="px-5 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-800 rounded-xl transition-colors"
+          >
+            Reset
+          </button>
+          <button 
+            onClick={handleApply}
+            className="px-8 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 rounded-xl shadow-lg shadow-indigo-500/30 transition-all"
+          >
+            Apply Filters
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const NotificationsModal = ({ isOpen, onClose, tasks, darkMode }) => {
+  const notifications = useMemo(() => {
+    const now = new Date();
+    const today = new Date();
+    const tomorrow = addDays(today, 1);
+    
+    return tasks
+      .filter(task => !task.completed)
+      .map(task => {
+        const dueDate = parseISO(task.dueDate);
+        let type = 'info';
+        let time = '';
+        
+        if (isBefore(dueDate, startOfDay(now))) {
+          type = 'overdue';
+          time = 'Overdue';
+        } else if (isSameDay(dueDate, now)) {
+          type = 'today';
+          time = 'Due today';
+        } else if (isSameDay(dueDate, tomorrow)) {
+          type = 'tomorrow';
+          time = 'Due tomorrow';
+        }
+        
+        return { ...task, type, time };
+      })
+      .filter(n => n.type !== 'info')
+      .sort((a, b) => {
+        if (a.type === 'overdue' && b.type !== 'overdue') return -1;
+        if (a.type !== 'overdue' && b.type === 'overdue') return 1;
+        return new Date(a.dueDate) - new Date(b.dueDate);
+      });
+  }, [tasks]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md shadow-2xl shadow-slate-900/20 overflow-hidden animate-in zoom-in-95 duration-300 max-h-[80vh] flex flex-col">
+        <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2.5">
+            <Bell size={20} className="text-indigo-500" />
+            Notifications
+            {notifications.length > 0 && (
+              <span className="text-xs bg-rose-500 text-white px-2 py-0.5 rounded-full">
+                {notifications.length}
+              </span>
+            )}
+          </h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full p-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+          {notifications.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="bg-emerald-100 dark:bg-emerald-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Bell size={24} className="text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2">All caught up!</h3>
+              <p className="text-slate-500 dark:text-slate-400">No pending notifications</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {notifications.map(notification => (
+                <div
+                  key={notification.id}
+                  className={`p-4 rounded-xl border transition-all ${
+                    notification.type === 'overdue'
+                      ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-100 dark:border-rose-900/30'
+                      : notification.type === 'today'
+                      ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-900/30'
+                      : 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/30'
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-semibold text-slate-800 dark:text-slate-200">
+                      {notification.title}
+                    </h4>
+                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                      notification.type === 'overdue'
+                        ? 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300'
+                        : notification.type === 'today'
+                        ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
+                        : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                    }`}>
+                      {notification.time}
+                    </span>
+                  </div>
+                  
+                  {notification.description && (
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-3 line-clamp-2">
+                      {notification.description}
+                    </p>
+                  )}
+                  
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 rounded ${CATEGORY_COLORS[notification.category]}`}>
+                        {notification.category}
+                      </span>
+                      <span className={`px-2 py-1 rounded ${PRIORITY_COLORS[notification.priority]}`}>
+                        {notification.priority}
+                      </span>
+                    </div>
+                    <span className="text-slate-500 dark:text-slate-400">
+                      {format(parseISO(notification.dueDate), 'MMM d, yyyy')}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        <div className="p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 flex justify-end">
+          <button 
+            onClick={onClose}
+            className="px-6 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-800 rounded-xl transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- COMPONENTS ---
 
 const Checklist = ({ checklist, onUpdate, isEditingMode = false }) => {
@@ -427,7 +816,7 @@ const RecurrenceSettings = ({ recurrence, pattern, onChangeRecurrence, onChangeP
   );
 };
 
-const TaskItem = ({ task, onUpdate, onDelete, onCompleteRecurring }) => {
+const TaskItem = ({ task, onUpdate, onDelete, onCompleteRecurring, onUndoRecurring }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTask, setEditedTask] = useState(task);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -439,9 +828,13 @@ const TaskItem = ({ task, onUpdate, onDelete, onCompleteRecurring }) => {
   const handleComplete = (e) => {
     e.stopPropagation();
     
-    // If task is already completed, just toggle the completion status
+    // If task is already completed, handle undo
     if (task.completed) {
-      onUpdate(task.id, { ...task, completed: false });
+      if (task.recurrence && onUndoRecurring) {
+        onUndoRecurring(task.id);
+      } else {
+        onUpdate(task.id, { ...task, completed: false });
+      }
     } 
     // If task is recurring and not completed, handle recurring completion
     else if (task.recurrence) {
@@ -593,12 +986,11 @@ const TaskItem = ({ task, onUpdate, onDelete, onCompleteRecurring }) => {
 
   return (
     <div 
-      className={`group relative bg-white dark:bg-slate-900 rounded-2xl border transition-all duration-300 mb-4 overflow-hidden
-        ${task.completed 
+      className={`group relative bg-white dark:bg-slate-900 rounded-2xl border transition-all duration-300 mb-4 ${
+        task.completed 
           ? 'opacity-75 border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50' 
           : 'hover:shadow-lg hover:shadow-slate-200/50 dark:hover:shadow-none border-slate-200 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-slate-700 hover:-translate-y-0.5'
-        }
-      `}
+      }`}
     >
       {/* Side Status Indicator */}
       <div className={`absolute left-0 top-0 bottom-0 w-1.5 transition-colors duration-300
@@ -736,8 +1128,8 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white dark:bg-slate-900 w-full h-[90vh] md:h-auto md:max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl shadow-slate-900/20 overflow-hidden animate-in slide-in-from-bottom-10 md:zoom-in-95 duration-300 flex flex-col ring-1 ring-white/10">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl shadow-slate-900/20 overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh] ring-1 ring-white/10">
         <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl sticky top-0 z-10">
           <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2.5">
             <div className="bg-indigo-100 dark:bg-indigo-900/50 p-1.5 rounded-lg text-indigo-600 dark:text-indigo-400">
@@ -884,12 +1276,23 @@ const App = () => {
   const [filter, setFilter] = useState('today'); 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [advancedFilters, setAdvancedFilters] = useState({
+    categories: [],
+    priorities: [],
+    showCompleted: true,
+    dateRange: 'all'
+  });
   
   // Theme state
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme');
     return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
   });
+
+  const sidebarRef = useRef(null);
 
   useEffect(() => {
     localStorage.setItem('tasks', JSON.stringify(tasks));
@@ -926,6 +1329,9 @@ const App = () => {
         .safe-area-bottom {
           padding-bottom: env(safe-area-inset-bottom);
         }
+        .safe-area-top {
+          padding-top: env(safe-area-inset-top);
+        }
       }
     `;
     document.head.appendChild(style);
@@ -949,12 +1355,6 @@ const App = () => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
-    // If task is already completed, just toggle it back
-    if (task.completed) {
-      updateTask(taskId, { ...task, completed: false });
-      return;
-    }
-
     // Calculate next occurrence based on current date/time
     const nextDate = calculateNextOccurrence(task, new Date());
     
@@ -977,18 +1377,84 @@ const App = () => {
     }
   };
 
+  const handleUndoRecurring = (taskId) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task || !task.recurrence) return;
+
+    // Find if there's a next occurrence that was created
+    const now = new Date();
+    const nextOccurrence = tasks.find(t => 
+      t.id !== taskId && 
+      t.title === task.title && 
+      t.recurrence === task.recurrence &&
+      isAfter(parseISO(t.dueDate), now) &&
+      !t.completed
+    );
+
+    // Mark current task as not completed
+    let updatedTasks = tasks.map(t => 
+      t.id === taskId ? { ...t, completed: false } : t
+    );
+
+    // If there's a next occurrence, remove it
+    if (nextOccurrence) {
+      updatedTasks = updatedTasks.filter(t => t.id !== nextOccurrence.id);
+    }
+
+    setTasks(updatedTasks);
+  };
+
   const filteredTasks = useMemo(() => {
     let result = tasks;
     const now = new Date();
+    const startOfWeek = startOfDay(addDays(now, -now.getDay()));
+    const endOfWeek = addDays(startOfWeek, 6);
+    const startOfMonth = startOfDay(new Date(now.getFullYear(), now.getMonth(), 1));
+    const endOfMonth = startOfDay(new Date(now.getFullYear(), now.getMonth() + 1, 0));
     
+    // Apply advanced filters
+    if (advancedFilters.categories.length > 0) {
+      result = result.filter(t => advancedFilters.categories.includes(t.category));
+    }
+    
+    if (advancedFilters.priorities.length > 0) {
+      result = result.filter(t => advancedFilters.priorities.includes(t.priority));
+    }
+    
+    if (!advancedFilters.showCompleted) {
+      result = result.filter(t => !t.completed);
+    }
+    
+    switch(advancedFilters.dateRange) {
+      case 'today':
+        result = result.filter(t => isSameDay(parseISO(t.dueDate), now));
+        break;
+      case 'week':
+        result = result.filter(t => 
+          !isBefore(parseISO(t.dueDate), startOfWeek) && 
+          !isAfter(parseISO(t.dueDate), endOfWeek)
+        );
+        break;
+      case 'month':
+        result = result.filter(t => 
+          !isBefore(parseISO(t.dueDate), startOfMonth) && 
+          !isAfter(parseISO(t.dueDate), endOfMonth)
+        );
+        break;
+      case 'overdue':
+        result = result.filter(t => !t.completed && isBefore(parseISO(t.dueDate), startOfDay(now)));
+        break;
+    }
+    
+    // Apply main filter
     switch(filter) {
-      case 'active': result = tasks.filter(t => !t.completed); break;
-      case 'completed': result = tasks.filter(t => t.completed); break;
-      case 'overdue': result = tasks.filter(t => !t.completed && isBefore(parseISO(t.dueDate), startOfDay(now))); break;
-      case 'today': result = tasks.filter(t => !t.completed && isSameDay(parseISO(t.dueDate), now)); break;
-      case 'recurring': result = tasks.filter(t => t.recurrence); break;
-      case 'all': result = tasks; break;
-      default: result = tasks.filter(t => !t.completed && isSameDay(parseISO(t.dueDate), now)); break;
+      case 'active': result = result.filter(t => !t.completed); break;
+      case 'completed': result = result.filter(t => t.completed); break;
+      case 'overdue': result = result.filter(t => !t.completed && isBefore(parseISO(t.dueDate), startOfDay(now))); break;
+      case 'today': result = result.filter(t => !t.completed && isSameDay(parseISO(t.dueDate), now)); break;
+      case 'recurring': result = result.filter(t => t.recurrence); break;
+      case 'all': break;
+      default: result = result.filter(t => !t.completed && isSameDay(parseISO(t.dueDate), now)); break;
     }
     
     // Sort: Overdue first, then by date, then priority
@@ -999,7 +1465,7 @@ const App = () => {
       if (aOverdue !== bOverdue) return aOverdue ? -1 : 1;
       return new Date(a.dueDate) - new Date(b.dueDate);
     });
-  }, [tasks, filter]);
+  }, [tasks, filter, advancedFilters]);
 
   const stats = useMemo(() => {
     const total = tasks.length;
@@ -1015,7 +1481,7 @@ const App = () => {
       <div className="flex min-h-screen font-sans text-slate-900 dark:text-slate-100 selection:bg-indigo-100 dark:selection:bg-indigo-900/50 selection:text-indigo-900 dark:selection:text-indigo-100">
         
         {/* Mobile Header */}
-        <div className="md:hidden fixed top-0 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 px-4 py-3 flex justify-between items-center transition-colors duration-200 safe-area-top">
+        <div className="md:hidden fixed top-0 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 px-4 py-3 flex justify-between items-center transition-colors duration-200 safe-area-top">
            <div className="flex items-center gap-2 font-bold text-indigo-600 dark:text-indigo-400">
              <div className="bg-indigo-600 text-white p-1 rounded-md">
                 <Layout size={18} fill="currentColor" />
@@ -1027,17 +1493,21 @@ const App = () => {
                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
              </button>
              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 text-slate-600 dark:text-slate-400">
-               <MoreHorizontal />
+               <MoreHorizontal size={20} />
              </button>
            </div>
         </div>
   
         {/* Sidebar */}
-        <aside className={`
-          fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl md:shadow-none
-          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          md:relative md:translate-x-0
-        `}>
+        <aside 
+          ref={sidebarRef}
+          className={`
+            fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl md:shadow-none overflow-hidden
+            ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+            md:relative md:translate-x-0
+          `}
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Sidebar Header - Fixed */}
           <div className="p-6 pb-0 flex-shrink-0">
             <div className="flex items-center justify-between mb-8 pl-2">
@@ -1049,7 +1519,7 @@ const App = () => {
               </div>
               <button 
                 onClick={() => setIsSidebarOpen(false)} 
-                className="md:hidden p-2 text-slate-400 hover:text-slate-600"
+                className="md:hidden p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
               >
                 <X size={24} />
               </button>
@@ -1072,7 +1542,10 @@ const App = () => {
           </div>
 
           {/* Scrollable Sidebar Content */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar px-6 pt-4">
+          <div 
+            className="flex-1 overflow-y-auto custom-scrollbar px-6 pt-4"
+            onScroll={(e) => e.stopPropagation()}
+          >
             <nav className="space-y-1.5">
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 px-4">Overview</div>
               {[
@@ -1149,9 +1622,9 @@ const App = () => {
            {/* Subtle background decoration */}
            <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-white to-transparent dark:from-slate-900 pointer-events-none opacity-60"></div>
 
-          <header className="flex-shrink-0 px-8 py-6 flex justify-between items-end z-10 sticky top-0 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-transparent transition-all duration-200 md:pt-6 pt-5">
+          <header className="flex-shrink-0 px-4 md:px-8 py-4 md:py-6 flex justify-between items-end z-10 sticky top-0 md:top-0 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-transparent transition-all duration-200">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+              <h1 className="text-xl md:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
                 {filter === 'all' ? 'All Tasks' : 
                  filter === 'active' ? 'Active Tasks' :
                  filter === 'today' ? "Today's Focus" :
@@ -1160,25 +1633,40 @@ const App = () => {
                  filter === 'completed' ? 'Completed Tasks' :
                  filter.charAt(0).toUpperCase() + filter.slice(1)}
               </h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-2 text-sm font-medium">
-                <Calendar size={15} className="text-indigo-500" />
+              <p className="text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-2 text-xs md:text-sm font-medium">
+                <Calendar size={12} className="text-indigo-500" />
                 {format(new Date(), 'EEEE, MMMM do, yyyy')}
               </p>
             </div>
             
-            <div className="flex gap-3">
-              <button className="p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:shadow-md transition-all">
-                <Filter size={18} />
+            <div className="flex gap-2 md:gap-3">
+              <button 
+                onClick={() => setIsFilterOpen(true)}
+                className="p-2 md:p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:shadow-md transition-all"
+                title="Filters"
+              >
+                <Filter size={16} className="md:w-[18px]" />
               </button>
-              <button className="p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:shadow-md transition-all relative">
-                <Bell size={18} />
-                {stats.overdue > 0 && <span className="absolute top-2 right-2.5 w-2 h-2 bg-rose-500 rounded-full border border-white dark:border-slate-900"></span>}
+              <button 
+                onClick={() => setIsNotificationsOpen(true)}
+                className="p-2 md:p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:shadow-md transition-all relative"
+                title="Notifications"
+              >
+                <Bell size={16} className="md:w-[18px]" />
+                {stats.overdue > 0 && <span className="absolute top-1.5 md:top-2 right-1.5 md:right-2.5 w-1.5 h-1.5 md:w-2 md:h-2 bg-rose-500 rounded-full border border-white dark:border-slate-900"></span>}
+              </button>
+              <button 
+                onClick={() => setIsSettingsOpen(true)}
+                className="p-2 md:p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:shadow-md transition-all hidden md:flex"
+                title="Settings"
+              >
+                <Settings size={16} className="md:w-[18px]" />
               </button>
             </div>
           </header>
   
-          <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-24 md:pb-10 custom-scrollbar z-0 mt-4">
-            <div className="max-w-4xl mx-auto">
+          <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-24 md:pb-10 custom-scrollbar z-0">
+            <div className="max-w-4xl mx-auto py-4">
               {stats.overdue > 0 && filter !== 'completed' && filter !== 'overdue' && (
                 <div className="mb-8 bg-rose-50/80 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/50 rounded-2xl p-4 flex items-start gap-4 shadow-sm backdrop-blur-sm">
                   <div className="bg-rose-100 dark:bg-rose-900/50 p-2 rounded-xl text-rose-600 dark:text-rose-400">
@@ -1225,7 +1713,7 @@ const App = () => {
                   </button>
                 </div>
               ) : (
-                <div className="space-y-1">
+                <div className="space-y-4">
                   {filteredTasks.map(task => (
                     <TaskItem 
                       key={task.id}
@@ -1233,6 +1721,7 @@ const App = () => {
                       onUpdate={updateTask}
                       onDelete={deleteTask}
                       onCompleteRecurring={handleCompleteRecurring}
+                      onUndoRecurring={handleUndoRecurring}
                     />
                   ))}
                 </div>
@@ -1249,16 +1738,48 @@ const App = () => {
           <Plus size={24} />
         </button>
 
+        {/* Settings Button (Mobile) */}
+        <button
+          onClick={() => setIsSettingsOpen(true)}
+          className="md:hidden fixed bottom-6 left-6 z-50 p-4 bg-slate-800 text-white rounded-full shadow-xl shadow-slate-900/40 hover:scale-105 active:scale-95 transition-all"
+        >
+          <Settings size={24} />
+        </button>
+
         <AddTaskModal 
           isOpen={isModalOpen} 
           onClose={() => setIsModalOpen(false)} 
           onAdd={addTask} 
         />
+
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          onClearData={() => {}}
+          darkMode={darkMode}
+        />
+
+        <FilterModal
+          isOpen={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          currentFilter={filter}
+          onFilterChange={setAdvancedFilters}
+          categories={CATEGORY_COLORS}
+          priorities={PRIORITY_COLORS}
+          darkMode={darkMode}
+        />
+
+        <NotificationsModal
+          isOpen={isNotificationsOpen}
+          onClose={() => setIsNotificationsOpen(false)}
+          tasks={tasks}
+          darkMode={darkMode}
+        />
   
         {/* Overlay for mobile sidebar */}
         {isSidebarOpen && (
           <div 
-            className="fixed inset-0 bg-slate-900/40 z-30 md:hidden backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 bg-slate-900/40 z-40 md:hidden backdrop-blur-sm transition-opacity"
             onClick={() => setIsSidebarOpen(false)}
           />
         )}
@@ -1268,3 +1789,4 @@ const App = () => {
 };
 
 export default App;
+[file content end]
