@@ -1,5 +1,3 @@
-[file name]: App.js
-[file content begin]
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Plus, Calendar, Repeat, Trash2, Edit2, Check, Save, 
@@ -1789,4 +1787,3 @@ const App = () => {
 };
 
 export default App;
-[file content end]
