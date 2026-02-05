@@ -4,7 +4,7 @@ import {
   X, ChevronDown, ChevronUp, GripVertical, CheckCircle2, 
   Clock, TrendingUp, ListTodo, AlertCircle, Layout, 
   PieChart, Tag, ArrowRight, MoreHorizontal, Sun, Moon,
-  Filter, Bell
+  Filter, Bell, Menu
 } from 'lucide-react';
 import { 
   format, addDays, addWeeks, addMonths, addYears, 
@@ -302,7 +302,7 @@ const Checklist = ({ checklist, onUpdate, isEditingMode = false }) => {
             
             <button 
               onClick={() => deleteItem(item.id)}
-              className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded transition-all"
+              className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded transition-all"
             >
               <Trash2 size={14} />
             </button>
@@ -321,7 +321,8 @@ const Checklist = ({ checklist, onUpdate, isEditingMode = false }) => {
             onKeyDown={(e) => e.key === 'Enter' && addItem()}
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2">
-             <span className="text-[10px] text-slate-400 font-medium px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">↵</span>
+             <span className="text-[10px] text-slate-400 font-medium px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hidden md:inline-block">↵</span>
+             <span className="text-[10px] text-slate-400 font-medium px-1.5 py-0.5 rounded md:hidden">Add</span>
           </div>
         </div>
         <button 
@@ -501,7 +502,7 @@ const TaskItem = ({ task, onUpdate, onDelete, onCompleteRecurring }) => {
                 <select 
                   value={editedTask.priority}
                   onChange={(e) => setEditedTask({...editedTask, priority: e.target.value})}
-                  className="w-full text-sm border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 appearance-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer"
+                  className="w-full text-sm border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 appearance-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer shadow-sm"
                 >
                   <option value="low">Low Priority</option>
                   <option value="medium">Medium Priority</option>
@@ -516,7 +517,7 @@ const TaskItem = ({ task, onUpdate, onDelete, onCompleteRecurring }) => {
                 <select 
                   value={editedTask.category}
                   onChange={(e) => setEditedTask({...editedTask, category: e.target.value})}
-                  className="w-full text-sm border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 appearance-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer"
+                  className="w-full text-sm border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 appearance-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer shadow-sm"
                 >
                   <option value="work">Work</option>
                   <option value="personal">Personal</option>
@@ -612,8 +613,8 @@ const TaskItem = ({ task, onUpdate, onDelete, onCompleteRecurring }) => {
             ${task.completed 
               ? 'bg-emerald-500 border-emerald-500 text-white scale-110' 
               : task.recurrence 
-                ? 'border-indigo-300 dark:border-indigo-700 text-transparent hover:border-indigo-500 hover:text-indigo-500 dark:hover:text-indigo-400' 
-                : 'border-slate-300 dark:border-slate-600 text-transparent hover:border-emerald-500 hover:text-emerald-500'
+                ? 'border-indigo-300 dark:border-indigo-700 text-transparent hover:border-indigo-500 hover:text-indigo-500 dark:hover:text-indigo-400 bg-white dark:bg-slate-800' 
+                : 'border-slate-300 dark:border-slate-600 text-transparent hover:border-emerald-500 hover:text-emerald-500 bg-white dark:bg-slate-800'
             }
           `}
         >
@@ -623,12 +624,12 @@ const TaskItem = ({ task, onUpdate, onDelete, onCompleteRecurring }) => {
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex justify-between items-start gap-3">
-            <h4 className={`font-semibold text-lg text-slate-800 dark:text-slate-100 truncate pr-16 transition-all ${task.completed ? 'line-through text-slate-400 dark:text-slate-500 decoration-slate-300' : ''}`}>
+            <h4 className={`font-semibold text-lg text-slate-800 dark:text-slate-100 truncate pr-2 transition-all ${task.completed ? 'line-through text-slate-400 dark:text-slate-500 decoration-slate-300' : ''}`}>
               {task.title}
             </h4>
             
-            {/* Quick Actions - Visible on Hover */}
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 absolute top-4 right-4 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-lg p-1 shadow-sm border border-slate-100 dark:border-slate-700">
+            {/* Quick Actions - Always visible on mobile, Hover on Desktop */}
+            <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200 absolute top-4 right-4 md:static md:bg-white/90 md:dark:bg-slate-800/90 md:backdrop-blur-sm md:rounded-lg md:p-1 md:shadow-sm md:border md:border-slate-100 md:dark:border-slate-700">
               <button 
                 onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
                 className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md transition-colors"
@@ -735,8 +736,8 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg shadow-2xl shadow-slate-900/20 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-5 duration-300 flex flex-col max-h-[90vh] ring-1 ring-white/10">
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-white dark:bg-slate-900 w-full h-[90vh] md:h-auto md:max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl shadow-slate-900/20 overflow-hidden animate-in slide-in-from-bottom-10 md:zoom-in-95 duration-300 flex flex-col ring-1 ring-white/10">
         <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl sticky top-0 z-10">
           <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2.5">
             <div className="bg-indigo-100 dark:bg-indigo-900/50 p-1.5 rounded-lg text-indigo-600 dark:text-indigo-400">
@@ -749,7 +750,7 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
           </button>
         </div>
         
-        <div className="p-6 overflow-y-auto custom-scrollbar">
+        <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">What needs to be done?</label>
@@ -854,7 +855,7 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
           </form>
         </div>
         
-        <div className="p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md flex justify-end gap-3 flex-shrink-0">
+        <div className="p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md flex justify-end gap-3 flex-shrink-0 safe-area-bottom">
           <button 
             onClick={onClose}
             className="px-5 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-800 rounded-xl transition-colors"
@@ -918,6 +919,13 @@ const App = () => {
       .custom-scrollbar {
         scrollbar-width: thin;
         scrollbar-color: ${darkMode ? '#334155 #0f172a' : '#cbd5e1 #f8fafc'};
+      }
+      
+      /* Mobile Safe Area Improvements */
+      @supports (padding-bottom: env(safe-area-inset-bottom)) {
+        .safe-area-bottom {
+          padding-bottom: env(safe-area-inset-bottom);
+        }
       }
     `;
     document.head.appendChild(style);
@@ -1004,32 +1012,10 @@ const App = () => {
 
   return (
     <div className={`min-h-screen transition-colors duration-200 ${darkMode ? 'dark bg-slate-950' : 'bg-slate-50'}`}>
-      <style jsx global>{`
-        /* Custom scrollbar for the entire app */
-        ::-webkit-scrollbar {
-          width: 10px;
-          height: 10px;
-        }
-        ::-webkit-scrollbar-track {
-          background: ${darkMode ? '#0f172a' : '#f8fafc'};
-        }
-        ::-webkit-scrollbar-thumb {
-          background: ${darkMode ? '#334155' : '#cbd5e1'};
-          border-radius: 5px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-          background: ${darkMode ? '#475569' : '#94a3b8'};
-        }
-        * {
-          scrollbar-width: thin;
-          scrollbar-color: ${darkMode ? '#334155 #0f172a' : '#cbd5e1 #f8fafc'};
-        }
-      `}</style>
-      
       <div className="flex min-h-screen font-sans text-slate-900 dark:text-slate-100 selection:bg-indigo-100 dark:selection:bg-indigo-900/50 selection:text-indigo-900 dark:selection:text-indigo-100">
         
         {/* Mobile Header */}
-        <div className="md:hidden fixed top-0 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 px-4 py-3 flex justify-between items-center transition-colors duration-200">
+        <div className="md:hidden fixed top-0 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 px-4 py-3 flex justify-between items-center transition-colors duration-200 safe-area-top">
            <div className="flex items-center gap-2 font-bold text-indigo-600 dark:text-indigo-400">
              <div className="bg-indigo-600 text-white p-1 rounded-md">
                 <Layout size={18} fill="currentColor" />
@@ -1048,7 +1034,7 @@ const App = () => {
   
         {/* Sidebar */}
         <aside className={`
-          fixed inset-y-0 left-0 z-40 w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl md:shadow-none
+          fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl md:shadow-none
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
           md:relative md:translate-x-0
         `}>
@@ -1062,6 +1048,12 @@ const App = () => {
                 <span>CarryOut</span>
               </div>
               <button 
+                onClick={() => setIsSidebarOpen(false)} 
+                className="md:hidden p-2 text-slate-400 hover:text-slate-600"
+              >
+                <X size={24} />
+              </button>
+              <button 
                 onClick={toggleTheme} 
                 className="hidden md:flex p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
                 title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
@@ -1071,7 +1063,7 @@ const App = () => {
             </div>
   
             <button 
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => { setIsModalOpen(true); setIsSidebarOpen(false); }}
               className="group w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-indigo-600 dark:bg-white dark:hover:bg-indigo-50 dark:text-slate-900 dark:hover:text-indigo-600 text-white py-3.5 px-4 rounded-xl shadow-xl shadow-slate-900/10 dark:shadow-none transition-all duration-300 transform active:scale-95 font-semibold mb-8"
             >
               <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" /> 
@@ -1093,7 +1085,7 @@ const App = () => {
               ].map(item => (
                 <button
                   key={item.id}
-                  onClick={() => setFilter(item.id)}
+                  onClick={() => { setFilter(item.id); setIsSidebarOpen(false); }}
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group ${
                     filter === item.id 
                       ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 shadow-sm' 
@@ -1185,7 +1177,7 @@ const App = () => {
             </div>
           </header>
   
-          <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-10 custom-scrollbar z-0 mt-4">
+          <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-24 md:pb-10 custom-scrollbar z-0 mt-4">
             <div className="max-w-4xl mx-auto">
               {stats.overdue > 0 && filter !== 'completed' && filter !== 'overdue' && (
                 <div className="mb-8 bg-rose-50/80 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/50 rounded-2xl p-4 flex items-start gap-4 shadow-sm backdrop-blur-sm">
@@ -1249,6 +1241,14 @@ const App = () => {
           </div>
         </main>
   
+        {/* Floating Action Button (Mobile) */}
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="md:hidden fixed bottom-6 right-6 z-50 p-4 bg-indigo-600 text-white rounded-full shadow-xl shadow-indigo-600/40 hover:scale-105 active:scale-95 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600"
+        >
+          <Plus size={24} />
+        </button>
+
         <AddTaskModal 
           isOpen={isModalOpen} 
           onClose={() => setIsModalOpen(false)} 
