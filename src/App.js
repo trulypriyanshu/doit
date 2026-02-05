@@ -365,7 +365,7 @@ const FilterModal = ({ isOpen, onClose, currentFilter, onFilterChange, categorie
           </button>
         </div>
         
-        <div className="p-6 space-y-6 overflow-y-auto flex-1">
+        <div className="p-6 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
           <div>
             <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-3">Date Range</h3>
             <div className="grid grid-cols-2 gap-2">
@@ -984,17 +984,25 @@ const TaskItem = ({ task, onUpdate, onDelete, onCompleteRecurring, onUndoRecurri
 
   return (
     <div 
-      className={`group relative bg-white dark:bg-slate-900 rounded-2xl border transition-all duration-300 mb-4 overflow-hidden ${
+      className={`group relative bg-white dark:bg-slate-900 rounded-2xl border transition-all duration-300 mb-4 ${
         task.completed 
           ? 'opacity-75 border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50' 
           : 'hover:shadow-lg hover:shadow-slate-200/50 dark:hover:shadow-none border-slate-200 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-slate-700 hover:-translate-y-0.5'
       }`}
-      style={{ overflow: 'visible' }}
+      style={{ 
+        overflow: 'hidden',
+        position: 'relative'
+      }}
     >
-      {/* Side Status Indicator - Fixed border radius masking */}
+      {/* Side Status Indicator - Fixed to be inside the card */}
       <div className={`absolute left-0 top-0 bottom-0 w-1.5 transition-colors duration-300 ${
         isOverdue ? 'bg-rose-500' : isDueToday ? 'bg-amber-500' : task.priority === 'high' ? 'bg-indigo-500' : 'bg-transparent group-hover:bg-indigo-500/30'
-      } rounded-l-2xl`} />
+      }`} 
+        style={{
+          borderTopLeftRadius: '0.75rem',
+          borderBottomLeftRadius: '0.75rem'
+        }}
+      />
 
       <div className="p-5 pl-7 flex gap-5 items-start cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
         {/* Checkbox / Complete Button */}
@@ -1255,7 +1263,7 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
           </button>
           <button 
             onClick={handleSubmit}
-            className="px-8 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 rounded-xl shadow-lg shadow-indigo-500/30 dark:shadow-indigo-900/50 transition-all transform active:scale-95 hover:-translate-y-0.5"
+            className="px-8 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 rounded-xl shadow-lg shadow-indigo-500/30 dark:shadow-indigo-900/50 transition-all"
           >
             Create Task
           </button>
@@ -1614,7 +1622,7 @@ const App = () => {
            {/* Subtle background decoration */}
            <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-white to-transparent dark:from-slate-900 pointer-events-none opacity-60"></div>
 
-          <header className="flex-shrink-0 px-4 md:px-8 py-4 md:py-6 flex justify-between items-end z-10 sticky top-0 md:top-0 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-transparent transition-all duration-200 md:mt-0 mt-14">
+          <header className="flex-shrink-0 px-4 md:px-8 py-4 md:py-6 flex justify-between items-end z-10 sticky top-0 md:top-0 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-transparent transition-all duration-200 md:mt-0">
             <div>
               <h1 className="text-xl md:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
                 {filter === 'all' ? 'All Tasks' : 
