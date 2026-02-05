@@ -612,8 +612,8 @@ const TaskItem = ({ task, onUpdate, onDelete, onCompleteRecurring }) => {
             ${task.completed 
               ? 'bg-emerald-500 border-emerald-500 text-white scale-110' 
               : task.recurrence 
-                ? 'border-indigo-300 dark:border-indigo-700 text-transparent hover:border-indigo-500 hover:text-indigo-500 dark:hover:text-indigo-400 bg-white dark:bg-slate-800' 
-                : 'border-slate-300 dark:border-slate-600 text-transparent hover:border-emerald-500 hover:text-emerald-500 bg-white dark:bg-slate-800'
+                ? 'border-indigo-300 dark:border-indigo-700 text-transparent hover:border-indigo-500 hover:text-indigo-500 dark:hover:text-indigo-400' 
+                : 'border-slate-300 dark:border-slate-600 text-transparent hover:border-emerald-500 hover:text-emerald-500'
             }
           `}
         >
@@ -1029,12 +1029,12 @@ const App = () => {
       <div className="flex min-h-screen font-sans text-slate-900 dark:text-slate-100 selection:bg-indigo-100 dark:selection:bg-indigo-900/50 selection:text-indigo-900 dark:selection:text-indigo-100">
         
         {/* Mobile Header */}
-        <div className="md:hidden fixed top-0 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-30 px-4 py-3 flex justify-between items-center transition-colors duration-200">
+        <div className="md:hidden fixed top-0 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 px-4 py-3 flex justify-between items-center transition-colors duration-200">
            <div className="flex items-center gap-2 font-bold text-indigo-600 dark:text-indigo-400">
              <div className="bg-indigo-600 text-white p-1 rounded-md">
                 <Layout size={18} fill="currentColor" />
              </div>
-             <span className="text-slate-900 dark:text-white tracking-tight">TaskFlow</span>
+             <span className="text-slate-900 dark:text-white tracking-tight">CarryOut</span>
            </div>
            <div className="flex items-center gap-2">
              <button onClick={toggleTheme} className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
@@ -1059,7 +1059,7 @@ const App = () => {
                 <div className="bg-indigo-600 text-white p-1.5 rounded-lg shadow-lg shadow-indigo-600/30">
                    <Layout size={22} fill="currentColor" />
                 </div>
-                <span>TaskFlow</span>
+                <span>CarryOut</span>
               </div>
               <button 
                 onClick={toggleTheme} 
@@ -1157,7 +1157,7 @@ const App = () => {
            {/* Subtle background decoration */}
            <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-white to-transparent dark:from-slate-900 pointer-events-none opacity-60"></div>
 
-          <header className="flex-shrink-0 px-8 py-6 flex justify-between items-end z-10 sticky top-0 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-transparent transition-all duration-200">
+          <header className="flex-shrink-0 px-8 py-6 flex justify-between items-end z-10 sticky top-16 md:top-0 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-transparent transition-all duration-200 md:pt-6 pt-20">
             <div>
               <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
                 {filter === 'all' ? 'All Tasks' : 
