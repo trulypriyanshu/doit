@@ -9,7 +9,8 @@ import {
 } from 'lucide-react';
 import { 
   format, addDays, addWeeks, addMonths, addYears, 
-  isAfter, isSameDay, parseISO, startOfDay, isBefore, isToday 
+  isAfter, isSameDay, parseISO, startOfDay, isBefore, isToday,
+  isTomorrow, isYesterday, differenceInDays
 } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -24,6 +25,30 @@ const getDaySuffix = (day) => {
     case 3: return 'rd';
     default: return 'th';
   }
+};
+
+const getSmartDateBadge = (dateString) => {
+  const date = parseISO(dateString);
+  const today = new Date();
+  
+  if (isToday(date)) return { text: 'Today', color: 'bg-emerald-500', textColor: 'text-emerald-700 dark:text-emerald-300' };
+  if (isTomorrow(date)) return { text: 'Tomorrow', color: 'bg-blue-500', textColor: 'text-blue-700 dark:text-blue-300' };
+  if (isYesterday(date)) return { text: 'Yesterday', color: 'bg-amber-500', textColor: 'text-amber-700 dark:text-amber-300' };
+  
+  const diffDays = differenceInDays(date, today);
+  if (diffDays >= -7 && diffDays <= 7) {
+    return { 
+      text: format(date, 'EEE'), 
+      color: 'bg-slate-200 dark:bg-slate-700', 
+      textColor: 'text-slate-700 dark:text-slate-300' 
+    };
+  }
+  
+  return { 
+    text: format(date, 'MMM d'), 
+    color: 'bg-slate-100 dark:bg-slate-800', 
+    textColor: 'text-slate-600 dark:text-slate-400' 
+  };
 };
 
 const getRecurrenceDisplayText = (task) => {
@@ -180,37 +205,11 @@ const addInterval = (date, task) => {
 
 // --- DATA & CONSTANTS ---
 
-const SAMPLE_TASKS = [
-  {
-    id: 1,
-    title: 'Morning Standup',
-    description: 'Daily team sync-up meeting',
-    priority: 'medium',
-    category: 'meeting',
-    dueDate: new Date().toISOString().split('T')[0],
-    completed: false,
-    recurrence: 'daily',
-    recurrencePattern: { interval: 1, daysOfWeek: [], dayOfMonth: null, monthOfYear: null, endDate: null },
-    createdAt: new Date().toISOString(),
-    checklist: [{ id: 1, text: 'Prepare update', checked: true }, { id: 2, text: 'Review blockers', checked: false }]
-  },
-  {
-    id: 2,
-    title: 'Weekly Report',
-    description: 'Compile metrics',
-    priority: 'high',
-    category: 'work',
-    dueDate: addDays(new Date(), 2).toISOString().split('T')[0],
-    completed: false,
-    recurrence: 'weekly',
-    recurrencePattern: { interval: 1, daysOfWeek: ['Friday'], endDate: null },
-    createdAt: new Date().toISOString(),
-    checklist: []
-  }
-];
+// Removed sample tasks - now app starts empty
+const SAMPLE_TASKS = [];
 
-// Refined, subtle premium colors
-const CATEGORY_COLORS = {
+// Dynamic categories - user can add custom ones
+const DEFAULT_CATEGORIES = {
   work: 'bg-blue-50/80 text-blue-700 ring-1 ring-blue-600/20 dark:bg-blue-900/20 dark:text-blue-300 dark:ring-blue-500/30',
   personal: 'bg-purple-50/80 text-purple-700 ring-1 ring-purple-600/20 dark:bg-purple-900/20 dark:text-purple-300 dark:ring-purple-500/30',
   meeting: 'bg-amber-50/80 text-amber-700 ring-1 ring-amber-600/20 dark:bg-amber-900/20 dark:text-amber-300 dark:ring-amber-500/30',
@@ -235,6 +234,7 @@ const SettingsModal = ({ isOpen, onClose, onClearData, darkMode }) => {
     if (confirmClear) {
       localStorage.removeItem('tasks');
       localStorage.removeItem('theme');
+      localStorage.removeItem('customCategories');
       window.location.reload();
     } else {
       setConfirmClear(true);
@@ -295,7 +295,7 @@ const SettingsModal = ({ isOpen, onClose, onClearData, darkMode }) => {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-slate-600 dark:text-slate-400">Version</span>
-                  <span className="font-medium text-slate-800 dark:text-slate-200">1.0.0</span>
+                  <span className="font-medium text-slate-800 dark:text-slate-200">1.1.0</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-600 dark:text-slate-400">Theme</span>
@@ -580,7 +580,7 @@ const NotificationsModal = ({ isOpen, onClose, tasks, darkMode }) => {
                   
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
-                      <span className={`px-2 py-1 rounded ${CATEGORY_COLORS[notification.category]}`}>
+                      <span className={`px-2 py-1 rounded ${DEFAULT_CATEGORIES[notification.category] || DEFAULT_CATEGORIES.work}`}>
                         {notification.category}
                       </span>
                       <span className={`px-2 py-1 rounded ${PRIORITY_COLORS[notification.priority]}`}>
@@ -612,10 +612,14 @@ const NotificationsModal = ({ isOpen, onClose, tasks, darkMode }) => {
 
 // --- COMPONENTS ---
 
-const Checklist = ({ checklist, onUpdate, isEditingMode = false }) => {
+const Checklist = ({ checklist, onUpdate, isEditingMode = false, showProgressBar = false }) => {
   const [newItem, setNewItem] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editingText, setEditingText] = useState('');
+
+  const progress = checklist.length > 0 
+    ? Math.round((checklist.filter(i => i.checked).length / checklist.length) * 100) 
+    : 0;
 
   const addItem = () => {
     if (!newItem.trim()) return;
@@ -643,9 +647,24 @@ const Checklist = ({ checklist, onUpdate, isEditingMode = false }) => {
 
   return (
     <div className={`mt-6 pt-5 border-t border-slate-100 dark:border-slate-800 ${isEditingMode ? 'bg-slate-50/50 dark:bg-slate-800/50 p-4 rounded-xl' : ''}`}>
+      {showProgressBar && checklist.length > 0 && (
+        <div className="mb-4">
+          <div className="flex justify-between text-xs font-medium mb-1.5">
+            <span className="text-slate-500 dark:text-slate-400">Progress</span>
+            <span className="text-slate-900 dark:text-slate-200">{progress}%</span>
+          </div>
+          <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+            <div 
+              className="bg-indigo-500 h-2 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.5)] transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
+        </div>
+      )}
+      
       <div className="flex items-center gap-2 mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
         <ListTodo size={14} />
-        <span>Subtasks • {Math.round((checklist.filter(i => i.checked).length / (checklist.length || 1)) * 100)}% Complete</span>
+        <span>Subtasks • {progress}% Complete</span>
       </div>
       
       <div className="space-y-3 mb-4">
@@ -724,8 +743,17 @@ const Checklist = ({ checklist, onUpdate, isEditingMode = false }) => {
   );
 };
 
-const RecurrenceSettings = ({ recurrence, pattern, onChangeRecurrence, onChangePattern }) => {
+const RecurrenceSettings = ({ recurrence, pattern, onChangeRecurrence, onChangePattern, dueDate }) => {
   const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  
+  // Auto-detect the day from due date if no days are selected
+  useEffect(() => {
+    if (recurrence === 'weekly' && (!pattern.daysOfWeek || pattern.daysOfWeek.length === 0) && dueDate) {
+      const date = parseISO(dueDate);
+      const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+      onChangePattern({ ...pattern, daysOfWeek: [dayName] });
+    }
+  }, [recurrence, dueDate]);
 
   return (
     <div className="p-5 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-slate-200/60 dark:border-slate-700/60 mt-6 space-y-5">
@@ -814,7 +842,7 @@ const RecurrenceSettings = ({ recurrence, pattern, onChangeRecurrence, onChangeP
   );
 };
 
-const TaskItem = ({ task, onUpdate, onDelete, onCompleteRecurring, onUndoRecurring }) => {
+const TaskItem = ({ task, onUpdate, onDelete, onCompleteRecurring, onUndoRecurring, categories }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTask, setEditedTask] = useState(task);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -851,6 +879,7 @@ const TaskItem = ({ task, onUpdate, onDelete, onCompleteRecurring, onUndoRecurri
 
   const isOverdue = !task.completed && isBefore(parseISO(task.dueDate), startOfDay(new Date()));
   const isDueToday = !task.completed && isSameDay(parseISO(task.dueDate), new Date());
+  const smartDate = getSmartDateBadge(task.dueDate);
 
   if (isEditing) {
     return (
@@ -859,20 +888,21 @@ const TaskItem = ({ task, onUpdate, onDelete, onCompleteRecurring, onUndoRecurri
           <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
             <Edit2 size={18} className="text-indigo-600" /> Edit Task
           </h3>
-          <button onClick={() => setIsEditing(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+          <button onClick={() => { setIsEditing(false); setEditedTask(task); }} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
             <X size={20} />
           </button>
         </div>
         
-        <div className="space-y-5">
+        <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-5">
           <div>
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Title</label>
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Title *</label>
             <input
               type="text"
               value={editedTask.title}
               onChange={(e) => setEditedTask({...editedTask, title: e.target.value})}
               className="w-full text-lg font-semibold border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 border px-4 py-3 shadow-sm transition-all"
               placeholder="Task title"
+              required
             />
           </div>
           
@@ -910,40 +940,42 @@ const TaskItem = ({ task, onUpdate, onDelete, onCompleteRecurring, onUndoRecurri
                   onChange={(e) => setEditedTask({...editedTask, category: e.target.value})}
                   className="w-full text-sm border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 appearance-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer shadow-sm"
                 >
-                  <option value="work">Work</option>
-                  <option value="personal">Personal</option>
-                  <option value="meeting">Meeting</option>
-                  <option value="learning">Learning</option>
-                  <option value="health">Health</option>
+                  {Object.keys(categories).map(cat => (
+                    <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
+                  ))}
                 </select>
                 <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-5 items-end">
+          <div className="grid grid-cols-2 gap-5">
              <div>
-              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Due Date</label>
+              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Due Date *</label>
               <input
                 type="date"
                 value={editedTask.dueDate}
                 onChange={(e) => setEditedTask({...editedTask, dueDate: e.target.value})}
                 className="w-full text-sm border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer"
+                required
               />
             </div>
-            <div className="flex gap-3 justify-end">
-              <button 
-                onClick={() => setIsEditing(false)}
-                className="px-4 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleSave}
-                className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200 dark:shadow-none text-sm font-semibold"
-              >
-                <Save size={16} /> Save Changes
-              </button>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Recurrence</label>
+              <div className="relative">
+                <select 
+                  value={editedTask.recurrence || 'none'}
+                  onChange={(e) => setEditedTask({...editedTask, recurrence: e.target.value})}
+                  className="w-full text-sm border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 appearance-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer shadow-sm"
+                >
+                  <option value="none">Does not repeat</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+                <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
             </div>
           </div>
 
@@ -953,31 +985,32 @@ const TaskItem = ({ task, onUpdate, onDelete, onCompleteRecurring, onUndoRecurri
                isEditingMode={true}
             />
 
-          <div className="pt-2">
+          {(editedTask.recurrence && editedTask.recurrence !== 'none') && (
+            <RecurrenceSettings
+              recurrence={editedTask.recurrence || 'none'}
+              pattern={editedTask.recurrencePattern || { interval: 1, daysOfWeek: [] }}
+              onChangeRecurrence={(val) => setEditedTask({...editedTask, recurrence: val, recurrencePattern: val === 'none' ? null : (editedTask.recurrencePattern || { interval: 1, daysOfWeek: [] }) })}
+              onChangePattern={(val) => setEditedTask({...editedTask, recurrencePattern: val})}
+              dueDate={editedTask.dueDate}
+            />
+          )}
+
+          <div className="flex gap-3 justify-end pt-4">
             <button 
-              onClick={() => setIsExpanded(!isExpanded)}
-              className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${
-                isExpanded 
-                  ? 'bg-indigo-50/50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300' 
-                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-indigo-300 dark:hover:border-slate-600'
-              }`}
+              type="button"
+              onClick={() => { setIsEditing(false); setEditedTask(task); }}
+              className="px-5 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
             >
-              <span className="text-sm font-semibold flex items-center gap-2">
-                <Repeat size={16} /> Recurrence Rules
-              </span>
-              {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              Cancel
             </button>
-            
-            {isExpanded && (
-              <RecurrenceSettings
-                recurrence={editedTask.recurrence || 'none'}
-                pattern={editedTask.recurrencePattern || { interval: 1, daysOfWeek: [] }}
-                onChangeRecurrence={(val) => setEditedTask({...editedTask, recurrence: val, recurrencePattern: val === 'none' ? null : (editedTask.recurrencePattern || { interval: 1, daysOfWeek: [] }) })}
-                onChangePattern={(val) => setEditedTask({...editedTask, recurrencePattern: val})}
-              />
-            )}
+            <button 
+              type="submit"
+              className="flex items-center gap-2 px-8 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200 dark:shadow-none text-sm font-semibold"
+            >
+              <Save size={16} /> Save Changes
+            </button>
           </div>
-        </div>
+        </form>
       </div>
     );
   }
@@ -1004,7 +1037,7 @@ const TaskItem = ({ task, onUpdate, onDelete, onCompleteRecurring, onUndoRecurri
         }}
       />
 
-      <div className="p-5 pl-7 flex gap-5 items-start cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
+      <div className="p-5 pl-7 flex gap-5 items-start">
         {/* Checkbox / Complete Button */}
         <button 
           onClick={handleComplete}
@@ -1021,7 +1054,7 @@ const TaskItem = ({ task, onUpdate, onDelete, onCompleteRecurring, onUndoRecurri
         </button>
 
         {/* Content */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
           <div className="flex justify-between items-start gap-3">
             <h4 className={`font-semibold text-lg text-slate-800 dark:text-slate-100 truncate pr-2 transition-all ${task.completed ? 'line-through text-slate-400 dark:text-slate-500 decoration-slate-300' : ''}`}>
               {task.title}
@@ -1052,16 +1085,16 @@ const TaskItem = ({ task, onUpdate, onDelete, onCompleteRecurring, onUndoRecurri
 
           <div className="flex flex-wrap items-center gap-2 mt-4">
             {/* Metadata Badges */}
-            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold shadow-sm ${CATEGORY_COLORS[task.category]}`}>
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold shadow-sm ${categories[task.category] || categories.work}`}>
               {task.category}
             </span>
             <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold shadow-sm ${PRIORITY_COLORS[task.priority]}`}>
               {task.priority}
             </span>
             
-            <div className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-md shadow-sm border ${isOverdue ? 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-300 border-rose-100 dark:border-rose-900/30' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}>
+            <div className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-md shadow-sm border ${smartDate.color} ${smartDate.textColor}`}>
               <Calendar size={13} />
-              {format(parseISO(task.dueDate), 'MMM d')}
+              {smartDate.text}
             </div>
 
             {task.recurrence && (
@@ -1096,6 +1129,7 @@ const TaskItem = ({ task, onUpdate, onDelete, onCompleteRecurring, onUndoRecurri
            <Checklist 
              checklist={task.checklist || []} 
              onUpdate={(newChecklist) => onUpdate(task.id, { ...task, checklist: newChecklist })}
+             showProgressBar={true}
            />
         </div>
       )}
@@ -1103,7 +1137,7 @@ const TaskItem = ({ task, onUpdate, onDelete, onCompleteRecurring, onUndoRecurri
   );
 };
 
-const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
+const AddTaskModal = ({ isOpen, onClose, onAdd, categories }) => {
   const [task, setTask] = useState({
     title: '', description: '', priority: 'medium', category: 'work',
     dueDate: new Date().toISOString().split('T')[0],
@@ -1111,11 +1145,38 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
     recurrencePattern: { interval: 1, daysOfWeek: [], endDate: null },
     checklist: []
   });
+  const [errors, setErrors] = useState({});
+  const [newCategory, setNewCategory] = useState('');
+  const [showNewCategory, setShowNewCategory] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (!isOpen) {
+      // Reset form when modal closes
+      setTask({
+        title: '', description: '', priority: 'medium', category: 'work',
+        dueDate: new Date().toISOString().split('T')[0],
+        recurrence: 'none',
+        recurrencePattern: { interval: 1, daysOfWeek: [], endDate: null },
+        checklist: []
+      });
+      setErrors({});
+      setNewCategory('');
+      setShowNewCategory(false);
+    }
+  }, [isOpen]);
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!task.title.trim()) newErrors.title = 'Task title is required';
+    if (!task.dueDate) newErrors.dueDate = 'Due date is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
+    
     onAdd({
       ...task,
       recurrence: task.recurrence === 'none' ? null : task.recurrence,
@@ -1123,16 +1184,24 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
       completed: false,
       createdAt: new Date().toISOString(),
     });
-    // Reset
-    setTask({
-      title: '', description: '', priority: 'medium', category: 'work',
-      dueDate: new Date().toISOString().split('T')[0],
-      recurrence: 'none',
-      recurrencePattern: { interval: 1, daysOfWeek: [], endDate: null },
-      checklist: []
-    });
     onClose();
   };
+
+  const handleAddCategory = () => {
+    if (newCategory.trim() && !categories[newCategory.toLowerCase()]) {
+      const categoryKey = newCategory.toLowerCase();
+      const newCategories = { ...categories, [categoryKey]: 'bg-slate-50/80 text-slate-700 ring-1 ring-slate-600/20 dark:bg-slate-900/20 dark:text-slate-300 dark:ring-slate-500/30' };
+      
+      // Save to localStorage
+      localStorage.setItem('customCategories', JSON.stringify(newCategories));
+      
+      setTask({...task, category: categoryKey});
+      setNewCategory('');
+      setShowNewCategory(false);
+    }
+  };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
@@ -1152,16 +1221,21 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
         <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">What needs to be done?</label>
+              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                What needs to be done? *
+              </label>
               <input
                 autoFocus
                 type="text"
                 placeholder="e.g., Review Q3 Marketing Report"
-                className="w-full text-lg border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 placeholder:text-slate-300 dark:placeholder:text-slate-600 px-4 py-3 shadow-sm transition-all"
+                className={`w-full text-lg border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 placeholder:text-slate-300 dark:placeholder:text-slate-600 px-4 py-3 shadow-sm transition-all ${
+                  errors.title ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : ''
+                }`}
                 value={task.title}
                 onChange={e => setTask({...task, title: e.target.value})}
                 required
               />
+              {errors.title && <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">{errors.title}</p>}
             </div>
             
             <div>
@@ -1183,14 +1257,39 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
                     value={task.category}
                     onChange={e => setTask({...task, category: e.target.value})}
                   >
-                    <option value="work">Work</option>
-                    <option value="personal">Personal</option>
-                    <option value="meeting">Meeting</option>
-                    <option value="learning">Learning</option>
-                    <option value="health">Health</option>
+                    {Object.keys(categories).map(cat => (
+                      <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
+                    ))}
                   </select>
                   <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 </div>
+                <button 
+                  type="button"
+                  onClick={() => setShowNewCategory(!showNewCategory)}
+                  className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium flex items-center gap-1"
+                >
+                  <Plus size={12} /> Add custom category
+                </button>
+                
+                {showNewCategory && (
+                  <div className="mt-2 flex gap-2 animate-in slide-in-from-top-2">
+                    <input
+                      type="text"
+                      value={newCategory}
+                      onChange={(e) => setNewCategory(e.target.value)}
+                      placeholder="Category name"
+                      className="flex-1 text-sm border-slate-200 dark:border-slate-700 dark:bg-slate-800 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCategory}
+                      className="px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      Add
+                    </button>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Priority</label>
@@ -1211,24 +1310,36 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
 
             <div className="grid grid-cols-2 gap-5">
               <div>
-                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Due Date</label>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                  Due Date *
+                </label>
                 <input
                   type="date"
-                  className="w-full text-sm border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-sm cursor-pointer"
+                  className={`w-full text-sm border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-sm cursor-pointer ${
+                    errors.dueDate ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : ''
+                  }`}
                   value={task.dueDate}
                   onChange={e => setTask({...task, dueDate: e.target.value})}
+                  required
                 />
+                {errors.dueDate && <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">{errors.dueDate}</p>}
               </div>
               <div>
                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Recurrence</label>
-                 <button 
-                  type="button"
-                  onClick={() => setTask({...task, recurrence: task.recurrence === 'none' ? 'weekly' : 'none'})}
-                  className={`w-full flex items-center justify-between px-4 py-2.5 text-sm border rounded-xl transition-all shadow-sm ${task.recurrence !== 'none' ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-indigo-300 dark:hover:border-slate-600'}`}
-                 >
-                   <span>{task.recurrence !== 'none' ? 'Enabled' : 'None'}</span>
-                   <Repeat size={16} />
-                 </button>
+                 <div className="relative">
+                   <select 
+                    className="w-full text-sm border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 appearance-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer shadow-sm"
+                    value={task.recurrence}
+                    onChange={e => setTask({...task, recurrence: e.target.value})}
+                   >
+                     <option value="none">Does not repeat</option>
+                     <option value="daily">Daily</option>
+                     <option value="weekly">Weekly</option>
+                     <option value="monthly">Monthly</option>
+                     <option value="yearly">Yearly</option>
+                   </select>
+                   <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                 </div>
               </div>
             </div>
 
@@ -1239,6 +1350,7 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
                   pattern={task.recurrencePattern}
                   onChangeRecurrence={(val) => setTask({...task, recurrence: val})}
                   onChangePattern={(val) => setTask({...task, recurrencePattern: val})}
+                  dueDate={task.dueDate}
                 />
               </div>
             )}
@@ -1256,6 +1368,7 @@ const AddTaskModal = ({ isOpen, onClose, onAdd }) => {
         
         <div className="p-5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-md flex justify-end gap-3 flex-shrink-0">
           <button 
+            type="button"
             onClick={onClose}
             className="px-5 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-800 rounded-xl transition-colors"
           >
@@ -1282,7 +1395,7 @@ const App = () => {
   });
   const [filter, setFilter] = useState('today'); 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Sidebar closed by default on mobile
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -1299,8 +1412,20 @@ const App = () => {
     return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
   });
 
+  // Categories state
+  const [categories, setCategories] = useState(() => {
+    const savedCategories = localStorage.getItem('customCategories');
+    return savedCategories ? JSON.parse(savedCategories) : DEFAULT_CATEGORIES;
+  });
+
+  // Check if this is a first-time user (no tasks ever created)
+  const isFirstTimeUser = tasks.length === 0 && !localStorage.getItem('hasCreatedTask');
+
   useEffect(() => {
     localStorage.setItem('tasks', JSON.stringify(tasks));
+    if (tasks.length > 0) {
+      localStorage.setItem('hasCreatedTask', 'true');
+    }
   }, [tasks]);
 
   useEffect(() => {
@@ -1346,9 +1471,17 @@ const App = () => {
     };
   }, [darkMode]);
 
+  useEffect(() => {
+    // Update categories when they change
+    localStorage.setItem('customCategories', JSON.stringify(categories));
+  }, [categories]);
+
   const toggleTheme = () => setDarkMode(!darkMode);
 
-  const addTask = (task) => setTasks([...tasks, { ...task, id: Date.now() }]);
+  const addTask = (task) => {
+    setTasks([...tasks, { ...task, id: Date.now() }]);
+    setIsModalOpen(false);
+  };
   
   const updateTask = (id, updated) => {
     setTasks(tasks.map(t => t.id === id ? updated : t));
@@ -1486,7 +1619,7 @@ const App = () => {
       <div className="flex min-h-screen font-sans text-slate-900 dark:text-slate-100 selection:bg-indigo-100 dark:selection:bg-indigo-900/50 selection:text-indigo-900 dark:selection:text-indigo-100">
         
         {/* Mobile Header */}
-        <div className="md:hidden fixed top-0 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 px-4 py-3 flex justify-between items-center transition-colors duration-200">
+        <div className="md:hidden fixed top-0 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 px-4 py-3 flex justify-between items-center transition-colors duration-200 safe-area-top">
            <div className="flex items-center gap-2 font-bold text-indigo-600 dark:text-indigo-400">
              <div className="bg-indigo-600 text-white p-1 rounded-md">
                 <Layout size={18} fill="currentColor" />
@@ -1498,7 +1631,7 @@ const App = () => {
                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
              </button>
              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 text-slate-600 dark:text-slate-400">
-               <MoreHorizontal size={20} />
+               <Menu size={20} />
              </button>
            </div>
         </div>
@@ -1679,7 +1812,7 @@ const App = () => {
                 </div>
               )}
 
-              {filter === 'today' && stats.dueToday === 0 && (
+              {filter === 'today' && stats.dueToday === 0 && tasks.length > 0 && (
                 <div className="mb-8 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 rounded-2xl p-4 flex items-start gap-4 shadow-sm backdrop-blur-sm">
                   <div className="bg-emerald-100 dark:bg-emerald-900/50 p-2 rounded-xl text-emerald-600 dark:text-emerald-400">
                     <CheckCircle2 size={22} />
@@ -1698,18 +1831,22 @@ const App = () => {
                        <ListTodo size={48} className="text-indigo-400/80" />
                     </div>
                   </div>
-                  <h3 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">No tasks found</h3>
+                  <h3 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
+                    {isFirstTimeUser ? "Welcome to CarryOut!" : "No tasks found"}
+                  </h3>
                   <p className="text-slate-500 dark:text-slate-400 mt-2 text-center max-w-xs font-medium">
-                    {filter === 'today' ? "Your schedule is clear for today." : 
-                     filter === 'overdue' ? "No overdue tasks. You're on track!" :
-                     filter === 'completed' ? "No completed tasks yet." :
-                     "You're all caught up! Start by adding a new task to your list."}
+                    {isFirstTimeUser 
+                      ? "Start organizing your tasks efficiently. Create your first task to begin!" 
+                      : filter === 'today' ? "Your schedule is clear for today." 
+                      : filter === 'overdue' ? "No overdue tasks. You're on track!"
+                      : filter === 'completed' ? "No completed tasks yet."
+                      : "You're all caught up! Add a new task to your list."}
                   </p>
                   <button 
                     onClick={() => setIsModalOpen(true)}
                     className="mt-8 text-white bg-indigo-600 hover:bg-indigo-700 px-6 py-3 rounded-xl font-semibold shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40 transition-all hover:-translate-y-1"
                   >
-                    Create your first task
+                    {isFirstTimeUser ? "Create your first task" : "Create new task"}
                   </button>
                 </div>
               ) : (
@@ -1722,6 +1859,7 @@ const App = () => {
                       onDelete={deleteTask}
                       onCompleteRecurring={handleCompleteRecurring}
                       onUndoRecurring={handleUndoRecurring}
+                      categories={categories}
                     />
                   ))}
                 </div>
@@ -1733,7 +1871,7 @@ const App = () => {
         {/* Floating Action Button (Mobile) */}
         <button
           onClick={() => setIsModalOpen(true)}
-          className="md:hidden fixed bottom-6 right-6 z-50 p-4 bg-indigo-600 text-white rounded-full shadow-xl shadow-indigo-600/40 hover:scale-105 active:scale-95 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600"
+          className="md:hidden fixed bottom-6 right-6 z-50 p-4 bg-indigo-600 text-white rounded-full shadow-xl shadow-indigo-600/40 hover:scale-105 active:scale-95 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600 safe-area-bottom"
         >
           <Plus size={24} />
         </button>
@@ -1741,7 +1879,7 @@ const App = () => {
         {/* Settings Button (Mobile) */}
         <button
           onClick={() => setIsSettingsOpen(true)}
-          className="md:hidden fixed bottom-6 left-6 z-50 p-4 bg-slate-800 text-white rounded-full shadow-xl shadow-slate-900/40 hover:scale-105 active:scale-95 transition-all"
+          className="md:hidden fixed bottom-6 left-6 z-50 p-4 bg-slate-800 text-white rounded-full shadow-xl shadow-slate-900/40 hover:scale-105 active:scale-95 transition-all safe-area-bottom"
         >
           <Settings size={24} />
         </button>
@@ -1749,7 +1887,8 @@ const App = () => {
         <AddTaskModal 
           isOpen={isModalOpen} 
           onClose={() => setIsModalOpen(false)} 
-          onAdd={addTask} 
+          onAdd={addTask}
+          categories={categories}
         />
 
         <SettingsModal
@@ -1764,7 +1903,7 @@ const App = () => {
           onClose={() => setIsFilterOpen(false)}
           currentFilter={filter}
           onFilterChange={setAdvancedFilters}
-          categories={CATEGORY_COLORS}
+          categories={categories}
           priorities={PRIORITY_COLORS}
           darkMode={darkMode}
         />
