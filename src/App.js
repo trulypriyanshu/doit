@@ -1627,6 +1627,7 @@ const AddTaskModal = ({ isOpen, onClose, onAdd, categories, setCategories }) => 
                   onChange={(e) => handleDueDateChange(e.target.value)}
                   required
                 />
+                <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 {errors.dueDate && <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">{errors.dueDate}</p>}
               </div>
               <div>
