@@ -1463,7 +1463,6 @@ const AddTaskModal = ({ isOpen, onClose, onAdd, categories, setCategories }) => 
                       type="button"
                       onClick={handleAddCategory}
                       className="px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors"
-                      disabled={!newCategory.trim()}
                     >
                       Add
                     </button>
