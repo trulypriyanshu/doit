@@ -2,7 +2,7 @@
 
 A modern, feature-rich Progressive Web App (PWA) for task management with intelligent recurring tasks, checklists, and productivity insights. Built with React and designed for seamless cross-platform use.
 
-![CarryOut Screenshot](https://via.placeholder.com/1280x720/4f46e5/ffffff?text=CarryOut+Demo)
+![CarryOut Screenshot](./public/screenshot-1.png)
 
 ## ✨ Features
 
