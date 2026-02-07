@@ -1774,6 +1774,13 @@ const App = () => {
 
   useEffect(() => {
     localStorage.setItem('theme', darkMode ? 'dark' : 'light');
+
+    // Also apply the class immediately
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
     
     // Add custom scrollbar styles
     const style = document.createElement('style');
@@ -1858,6 +1865,16 @@ const App = () => {
     };
   }, [isAppInstalled]);
 
+  // Add this new useEffect for theme handling
+useEffect(() => {
+  // Apply dark mode class to the root element
+  if (darkMode) {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+}, [darkMode]);
+
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
     
@@ -1873,7 +1890,7 @@ const App = () => {
     setShowInstallPrompt(false);
   };
 
-  const toggleTheme = () => setDarkMode(!darkMode);
+  const toggleTheme = () => {console.log('Toggling theme, current darkMode:', darkMode); setDarkMode(!darkMode);};
 
   const addTask = (task) => {
     setTasks([...tasks, { ...task, id: Date.now() }]);
