@@ -1,6 +1,23 @@
 # CarryOut • Smart Task Manager 🚀
 
-A modern, feature-rich Progressive Web App (PWA) for task management with intelligent recurring tasks, checklists, and productivity insights. Built with React and designed for seamless cross-platform use.
+[![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen?style=for-the-badge&logo=vercel)](https://carryout.vercel.app)
+[![GitHub stars](https://img.shields.io/github/stars/trulypriyanshu/carryout?style=for-the-badge&logo=github)](https://github.com/trulypriyanshu/carryout/stargazers)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
+[![PWA Ready](https://img.shields.io/badge/PWA-Ready-success?style=for-the-badge&logo=pwa)](https://pwabuilder.com)
+
+> A modern, feature-rich Progressive Web App (PWA) for task management with intelligent recurring tasks, checklists, and productivity insights. Built with React and designed for seamless cross-platform use.
+
+<div align="center">
+  <a href="https://carryout.vercel.app" target="_blank">
+    <img src="https://img.shields.io/badge/🚀_Live_Demo-4f46e5?style=for-the-badge&logo=vercel&logoColor=white&labelColor=4f46e5" alt="Live Demo" />
+  </a>
+  <a href="#-quick-start">
+    <img src="https://img.shields.io/badge/⚡_Quick_Start-7c3aed?style=for-the-badge&logo=github&logoColor=white&labelColor=7c3aed" alt="Quick Start" />
+  </a>
+  <a href="#-features">
+    <img src="https://img.shields.io/badge/✨_Features-10b981?style=for-the-badge&logo=feature&logoColor=white&labelColor=10b981" alt="Features" />
+  </a>
+</div>
 
 ![CarryOut Screenshot](./public/screenshot-1.png)
 
