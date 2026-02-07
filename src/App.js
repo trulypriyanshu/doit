@@ -256,6 +256,39 @@ const SettingsModal = ({ isOpen, onClose, onClearData, darkMode }) => {
         </div>
         
         <div className="p-6 space-y-6">
+          {/* Add Theme Toggle Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Appearance</h3>
+            
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {darkMode ? (
+                    <Moon size={20} className="text-indigo-500" />
+                  ) : (
+                    <Sun size={20} className="text-amber-500" />
+                  )}
+                  <div>
+                    <h4 className="font-medium text-slate-800 dark:text-slate-200">Theme</h4>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      {darkMode ? 'Dark mode' : 'Light mode'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={toggleTheme}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    darkMode ? 'bg-indigo-600' : 'bg-slate-300'
+                  }`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    darkMode ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">Data Management</h3>
             
@@ -2271,6 +2304,7 @@ const App = () => {
           onClose={() => setIsSettingsOpen(false)}
           onClearData={() => {}}
           darkMode={darkMode}
+          toggleTheme={toggleTheme}
         />
 
         <FilterModal
