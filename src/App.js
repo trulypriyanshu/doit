@@ -1620,7 +1620,7 @@ const AddTaskModal = ({ isOpen, onClose, onAdd, categories, setCategories }) => 
                 </label>
                 <input
                   type="date"
-                  className={`w-full text-sm border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-sm cursor-pointer ${
+                  className={`w-full text-sm border-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-4 py-2.5 pr-10 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-sm cursor-pointer ${
                     errors.dueDate ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : ''
                   }`}
                   value={task.dueDate}
