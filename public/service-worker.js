@@ -1,5 +1,5 @@
 // Service Worker for CarryOut PWA
-const CACHE_NAME = 'carryout-v1.2.7';
+const CACHE_NAME = 'carryout-v1.2.8';
 const urlsToCache = [
   '/',
   '/index.html',
