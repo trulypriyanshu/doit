@@ -3,41 +3,223 @@
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <meta
-      name="description"
-      content="Web site created using create-react-app"
-    />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
-
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
-    -->
-    <title>React App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    
+    <!-- PWA Theme & Colors -->
+    <meta name="theme-color" content="#4f46e5" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="CarryOut" />
+    <meta name="application-name" content="CarryOut" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <!-- SEO & PWA Metadata -->
+    <meta name="description" content="CarryOut - Your smart task management companion with recurring tasks, checklists, and productivity insights" />
+    <meta name="keywords" content="task manager, todo list, productivity, recurring tasks, checklist, time management" />
+    <meta name="author" content="CarryOut Team" />
+    
+    <!-- Social Media Sharing -->
+    <meta property="og:title" content="CarryOut - Smart Task Manager" />
+    <meta property="og:description" content="Organize your tasks efficiently with recurring tasks, checklists, and smart productivity features" />
+    <meta property="og:image" content="%PUBLIC_URL%/og-image.png" />
+    <meta property="og:url" content="https://carryout.app" />
+    <meta property="og:type" content="website" />
+    
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="CarryOut - Smart Task Manager" />
+    <meta name="twitter:description" content="Organize your tasks efficiently with recurring tasks, checklists, and smart productivity features" />
+    <meta name="twitter:image" content="%PUBLIC_URL%/twitter-image.png" />
+    
+    <!-- PWA Icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/favicon-16x16.png" />
+    <link rel="mask-icon" href="%PUBLIC_URL%/safari-pinned-tab.svg" color="#4f46e5" />
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" crossorigin="use-credentials" />
+    
+    <!-- Splash Screen for iOS -->
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash-640x1136.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash-1242x2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash-1536x2048.png" media="(min-device-width: 768px) and (max-device-width: 1024px) and (-webkit-min-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash-1668x2224.png" media="(min-device-width: 834px) and (max-device-width: 834px) and (-webkit-min-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="%PUBLIC_URL%/splash-2048x2732.png" media="(min-device-width: 1024px) and (max-device-width: 1024px) and (-webkit-min-device-pixel-ratio: 2) and (orientation: portrait)" />
+    
+    <!-- Preconnect for Performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Web App Title -->
+    <title>CarryOut • Smart Task Manager</title>
+    
+    <!-- Service Worker Registration Script -->
+    <script>
+      // Register service worker for PWA
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/service-worker.js').then(
+            function(registration) {
+              console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            },
+            function(err) {
+              console.log('ServiceWorker registration failed: ', err);
+            }
+          );
+        });
+      }
+      
+      // Theme detection and safe area handling
+      (function() {
+        // Detect preferred color scheme
+        const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
+        
+        // Handle safe areas for mobile devices
+        function updateSafeArea() {
+          const vh = window.innerHeight * 0.01;
+          document.documentElement.style.setProperty('--vh', `${vh}px`);
+        }
+        
+        // Initial call
+        updateSafeArea();
+        
+        // Update on resize
+        window.addEventListener('resize', updateSafeArea);
+        window.addEventListener('orientationchange', updateSafeArea);
+        
+        // Add dark mode class if preferred
+        if (prefersDarkScheme.matches) {
+          document.documentElement.classList.add('dark');
+        }
+        
+        // Listen for theme changes
+        prefersDarkScheme.addEventListener('change', e => {
+          if (e.matches) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        });
+      })();
+    </script>
+    
+    <!-- iOS Web App Specific -->
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="msapplication-TileColor" content="#4f46e5" />
+    <meta name="msapplication-config" content="%PUBLIC_URL%/browserconfig.xml" />
+    
+    <!-- Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'" />
+    
+    <style>
+      /* CSS Custom Properties for safe areas */
+      :root {
+        --safe-area-top: env(safe-area-inset-top, 0px);
+        --safe-area-right: env(safe-area-inset-right, 0px);
+        --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+        --safe-area-left: env(safe-area-inset-left, 0px);
+        --vh: 1vh;
+      }
+      
+      /* Prevent blue highlight on mobile taps */
+      * {
+        -webkit-tap-highlight-color: transparent;
+      }
+      
+      /* Loading animation */
+      .app-loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        z-index: 9999;
+        transition: opacity 0.3s ease-out;
+      }
+      
+      .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 1s ease-in-out infinite;
+      }
+      
+      .loading-text {
+        color: white;
+        margin-top: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 500;
+      }
+      
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      
+      /* Hide loading screen when app is loaded */
+      .app-loaded .app-loading {
+        opacity: 0;
+        pointer-events: none;
+      }
+      
+      /* Prevent pull-to-refresh on mobile */
+      body {
+        overscroll-behavior-y: contain;
+        -webkit-overflow-scrolling: touch;
+      }
+    </style>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <!-- Loading Screen -->
+    <div class="app-loading">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Loading CarryOut...</div>
+    </div>
+    
+    <noscript>
+      <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: white; z-index: 9999; padding: 20px; text-align: center;">
+        <div>
+          <h1 style="color: #4f46e5; margin-bottom: 20px;">JavaScript Required</h1>
+          <p style="color: #666; margin-bottom: 30px; max-width: 400px;">
+            CarryOut requires JavaScript to run. Please enable JavaScript in your browser settings to use this application.
+          </p>
+          <p style="color: #999; font-size: 14px;">
+            If you believe this is an error, please refresh the page or contact support.
+          </p>
+        </div>
+      </div>
+    </noscript>
+    
     <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
-
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
-
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
+    
+    <!-- Script to hide loading screen when app loads -->
+    <script>
+      // Hide loading screen when React app mounts
+      document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+          document.body.classList.add('app-loaded');
+        }, 1000);
+      });
+      
+      // Prevent context menu on long press (optional)
+      document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+      });
+      
+      // Prevent text selection on long press (optional for better mobile UX)
+      document.addEventListener('selectstart', function(e) {
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+          e.preventDefault();
+        }
+      });
+    </script>
   </body>
 </html>
